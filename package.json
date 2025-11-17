@@ -1,0 +1,30 @@
+{
+  "name": "rotaptcha-node",
+  "version": "1.0.0",
+  "description": "Node.js SDK for Rotaptcha - A simple CAPTCHA verification solution for backend applications",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test/test.js"
+  },
+  "keywords": [
+    "rotaptcha",
+    "captcha",
+    "verification",
+    "security",
+    "nodejs",
+    "backend"
+  ],
+  "author": "Rotaptcha Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rotaptcha/rotaptcha-node.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rotaptcha/rotaptcha-node/issues"
+  },
+  "homepage": "https://github.com/rotaptcha/rotaptcha-node#readme",
+  "engines": {
+    "node": ">=12.0.0"
+  }
+}
