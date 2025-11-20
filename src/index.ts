@@ -1,4 +1,4 @@
-import { drawShapes } from "./shapes";
+import { drawShapes } from "./drawShapes";
 
 export function rotaptcha(): string {
 
