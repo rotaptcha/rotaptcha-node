@@ -53,7 +53,7 @@ export function randomWithStep(lower: number, upper: number, step: number = 1): 
  *
  * @returns 8-character string, e.g., "aB9kP2mX"
  */
-function generateShortUuid(): string {
+export function generateShortUuid(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   const length = 8;
   const result: string[] = [];
