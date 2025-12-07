@@ -1,13 +1,13 @@
 {
   "name": "rotaptcha-node",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "A modern, gamified CAPTCHA solution for Node.js",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "test" : "jest",
+    "test": "jest",
     "test:watch": "jest --watch"
   },
   "keywords": [],
