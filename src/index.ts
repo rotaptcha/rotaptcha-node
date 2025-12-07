@@ -1,17 +1,14 @@
 import { drawShapes } from "./drawShapes";
 import { CreateProps, Rotaptcha, VerifyProps } from "./types";
 import { generateShortUuid, randomWithStep } from "./utils";
-import { Low } from "lowdb";
-import { JSONFile } from "lowdb/node";
-import path from "path";
+import { Low, Memory } from "lowdb";
 
 interface Database {
     answers: Record<string, number>;
 }
 
-const dbPath = path.join(process.cwd(), "rotaptcha-db.json");
 const defaultData: Database = { answers: {} };
-const adapter = new JSONFile<Database>(dbPath);
+const adapter = new Memory<Database>();
 const db = new Low<Database>(adapter, defaultData);
 
 const rotaptcha: Rotaptcha = {
