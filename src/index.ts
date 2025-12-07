@@ -1,45 +1,53 @@
 import { drawShapes } from "./drawShapes";
-import { VerifyProps } from "./types";
+import { CreateProps, Rotaptcha, VerifyProps } from "./types";
 import { generateShortUuid, randomWithStep } from "./utils";
 
-
-
-const rotaptcha = {
-
-    create: (): string => {
-
-        const rotation = randomWithStep(30, 90, 5);
+const rotaptcha: Rotaptcha = {
+    
+    create: ({
+        width = 400,
+        height = 400,
+        minValue = 30,
+        maxValue = 90,
+        step = 5,
+        strokeWidth = 5,
+        wobble = false,
+        noise = true
+    }: CreateProps): string => {
+        
+        const rotation = randomWithStep(minValue, maxValue, step);
         const uuid = generateShortUuid();
-
+        
         localStorage.setItem(uuid, rotation.toString());
-        return drawShapes(400, 400, 5, rotation, true, true);
+        return drawShapes(width, height, strokeWidth, rotation, wobble, noise);
     },
-    verify: (args: VerifyProps) => {
-
+    
+    verify: (args: VerifyProps): boolean => {
+        
         if (args.answer && args.uuid) {
-
-            const actualAnswer = localStorage.getItem("uuid");
-
+            
+            const actualAnswer = localStorage.getItem(args.uuid);
+            
             if (actualAnswer) {
-
+                
                 if (parseInt(actualAnswer) === parseInt(args.answer)) {
                     return true;
                 } else {
                     return false;
                 }
-
+                
             } else {
                 return false;
             }
-
+            
         }
         
         return false;
-
-
+        
+        
     },
-
-
+    
+    
 }
 
 export default rotaptcha;
