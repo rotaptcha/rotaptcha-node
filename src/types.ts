@@ -1,7 +1,7 @@
 
 export interface Rotaptcha {
-    create(args: CreateProps): string;
-    verify(props: VerifyProps): boolean;
+    create(args: CreateProps): Promise<string>;
+    verify(props: VerifyProps): Promise<boolean>;
 }
 
 
