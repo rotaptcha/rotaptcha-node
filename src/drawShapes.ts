@@ -2,7 +2,7 @@
 import { createCanvas } from 'canvas';
 
 
-export function drawShapes(canvasWidth: number, canvasHeight: number, strokeWidth: number, rotationDegrees: number, wobble: boolean = false, noise: boolean = false): string {
+export async function drawShapes(canvasWidth: number, canvasHeight: number, strokeWidth: number, rotationDegrees: number, wobble: boolean = false, noise: boolean = false): Promise<string> {
     const canvas = createCanvas(canvasWidth, canvasHeight);
     const ctx = canvas.getContext('2d');
     
@@ -324,12 +324,32 @@ export function drawShapes(canvasWidth: number, canvasHeight: number, strokeWidt
         ctx.restore();
     }
     
-    const buffer = canvas.toBuffer('image/png');
-    return buffer.toString('base64'); // Return the image as base64 string
+    // Use createPNGStream to avoid file system issues in read-only environments
+    return new Promise((resolve, reject) => {
+        try {
+            const chunks: Buffer[] = [];
+            const stream = canvas.createPNGStream();
+            
+            stream.on('data', (chunk: Buffer) => {
+                chunks.push(chunk);
+            });
+            
+            stream.on('end', () => {
+                const buffer = Buffer.concat(chunks);
+                resolve(buffer.toString('base64'));
+            });
+            
+            stream.on('error', (err) => {
+                reject(err);
+            });
+        } catch (error) {
+            reject(new Error(`Failed to generate captcha image: ${error instanceof Error ? error.message : String(error)}`));
+        }
+    });
 }
 
 // Helper function to "unrotate" the shapes
-export function unrotateShapes(canvasWidth: number, canvasHeight: number, strokeWidth: number, rotationDegrees: number) {
+export async function unrotateShapes(canvasWidth: number, canvasHeight: number, strokeWidth: number, rotationDegrees: number): Promise<string> {
     // This just calls drawShapes with the negative rotation angle
     return drawShapes(canvasWidth, canvasHeight, strokeWidth, -rotationDegrees);
 }
