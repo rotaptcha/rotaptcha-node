@@ -19,11 +19,11 @@ const rotaptcha: Rotaptcha = {
         strokeWidth = 5,
         wobble = false,
         noise = true
-    }: CreateProps): Promise<string> => {
+    }: CreateProps): Promise<{image: string, token: string}> => {
         const rotation = randomWithStep(minValue, maxValue, step);
         const uuid = generateShortUuid();
         answersCollection.insert({ uuid, rotation });
-        return await drawShapes(width, height, strokeWidth, rotation, wobble, noise);
+        return { image: await drawShapes(width, height, strokeWidth, rotation, wobble, noise), token: uuid };
     },
 
     verify: async (args: VerifyProps): Promise<boolean> => {

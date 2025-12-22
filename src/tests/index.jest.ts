@@ -2,24 +2,8 @@ import rotaptcha from "../index";
 import * as fs from "fs";
 import * as path from "path";
 
-// Mock lowdb
-jest.mock("lowdb", () => {
-  const mockDb = {
-    read: jest.fn(async function() { return this; }),
-    write: jest.fn(async function() { return this; }),
-    data: { answers: {} },
-  };
-  const Low = jest.fn(() => mockDb);
-  return { Low };
-});
-
-jest.mock("lowdb/node", () => {
-  const JSONFile = jest.fn();
-  return { JSONFile };
-});
-
 describe("Rotaptcha", () => {
-  const dbPath = path.join(process.cwd(), "rotaptcha-db.json");
+  const dbPath = path.join(process.cwd(), "rotaptcha.db.json");
 
   // Clean up database before and after tests
   beforeEach(() => {
@@ -36,7 +20,7 @@ describe("Rotaptcha", () => {
   });
 
   describe("create", () => {
-    it("should create a CAPTCHA and return a PNG image string", async () => {
+    it("should create a CAPTCHA and return an object with image and token", async () => {
       const result = await rotaptcha.create({
         width: 400,
         height: 400,
@@ -48,10 +32,15 @@ describe("Rotaptcha", () => {
         noise: true,
       });
 
-      // Result should be a string (PNG data URL or base64)
+      // Result should be an object with image and token
       expect(result).toBeDefined();
-      expect(typeof result).toBe("string");
-      expect(result.length).toBeGreaterThan(0);
+      expect(typeof result).toBe("object");
+      expect(result).toHaveProperty("image");
+      expect(result).toHaveProperty("token");
+      expect(typeof result.image).toBe("string");
+      expect(typeof result.token).toBe("string");
+      expect(result.image.length).toBeGreaterThan(0);
+      expect(result.token.length).toBeGreaterThan(0);
     });
 
     it("should store the answer in the database with a unique UUID", async () => {
@@ -63,16 +52,19 @@ describe("Rotaptcha", () => {
         step: 5,
       });
 
-      // Result should be defined
+      // Result should be defined with image and token
       expect(result).toBeDefined();
-      expect(typeof result).toBe("string");
+      expect(typeof result).toBe("object");
+      expect(result).toHaveProperty("image");
+      expect(result).toHaveProperty("token");
+      expect(typeof result.token).toBe("string");
     });
   });
 
   describe("verify", () => {
     it("should return true when the correct answer is provided", async () => {
-      // Create a CAPTCHA first
-      await rotaptcha.create({
+      // Create a CAPTCHA first - now returns {image, token}
+      const captcha = await rotaptcha.create({
         width: 400,
         height: 400,
         minValue: 30,
@@ -80,11 +72,11 @@ describe("Rotaptcha", () => {
         step: 5,
       });
 
-      // Since we're using mocked DB, we need to manually set up the data
-      // For this test, we'll verify that the function accepts correct parameters
+      // Since we're using LokiJS, we need to retrieve the stored rotation
+      // The rotation is stored but we need to test with the actual token
       const isVerified = await rotaptcha.verify({
-        uuid: "test-uuid",
-        answer: "50",
+        uuid: captcha.token,
+        answer: "50", // This should match if rotation was 50
       });
 
       // The verify function should return a boolean
@@ -92,8 +84,8 @@ describe("Rotaptcha", () => {
     });
 
     it("should return false when an incorrect answer is provided", async () => {
-      // Create a CAPTCHA first
-      await rotaptcha.create({
+      // Create a CAPTCHA first - now returns {image, token}
+      const captcha = await rotaptcha.create({
         width: 400,
         height: 400,
         minValue: 30,
@@ -101,13 +93,23 @@ describe("Rotaptcha", () => {
         step: 5,
       });
 
-      // Verify with an incorrect answer or missing UUID
+      // Verify with an incorrect answer
       const isVerified = await rotaptcha.verify({
-        uuid: "non-existent-uuid",
-        answer: "999",
+        uuid: captcha.token,
+        answer: "999", // This should never match since maxValue is 90
       });
 
-      expect(typeof isVerified).toBe("boolean");
+      expect(isVerified).toBe(false);
+    });
+
+    it("should return false when UUID does not exist", async () => {
+      // Verify with a non-existent UUID
+      const isVerified = await rotaptcha.verify({
+        uuid: "non-existent-uuid",
+        answer: "50",
+      });
+
+      expect(isVerified).toBe(false);
     });
   });
 });
