@@ -13,9 +13,9 @@ const rotaptcha: Rotaptcha = {
     create: async ({
         width = 400,
         height = 400,
-        minValue = 30,
+        minValue = 20,
         maxValue = 90,
-        step = 5,
+        step = 10,
         strokeWidth = 5,
         wobble = false,
         noise = true
