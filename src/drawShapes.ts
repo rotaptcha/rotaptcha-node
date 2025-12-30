@@ -69,12 +69,12 @@ export async function drawShapes(canvasWidth: number, canvasHeight: number, stro
     // Add noise over the entire canvas AFTER all shapes and rotation are completed
     if (noise) {
         const noiseCount = 50; // More noise points for the entire canvas
-        const noiseSize = strokeWidth * 0.6; // Noise size relative to stroke width
+        const noiseSize = strokeWidth * 0.8; // Noise size relative to stroke width
         
         ctx.save();
-        // Use black with opacity, matching the shape color but with transparency
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)'; // More consistent with black shapes
-        ctx.lineWidth = strokeWidth * 0.4;
+        // Use the same color as shapes with opacity
+        ctx.strokeStyle = 'rgba(0, 0, 0, 1)';
+        ctx.lineWidth = strokeWidth * 0.6;
         
         for (let i = 0; i < noiseCount; i++) {
             // Use seeded random to ensure consistent noise across the entire canvas
@@ -121,7 +121,7 @@ export async function drawShapes(canvasWidth: number, canvasHeight: number, stro
         }
         
         // Add a few scattered speckles
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.25)'; // Match the shape color with transparency
+        ctx.fillStyle = 'rgba(0, 0, 0, 1)'; // Same color as shapes with transparency
         for (let i = 0; i < noiseCount * 2; i++) {
             const speckleX = seededRandom(shapeSeed, i * 50) * canvasWidth;
             const speckleY = seededRandom(shapeSeed, i * 60) * canvasHeight;
