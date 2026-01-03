@@ -2,8 +2,36 @@ import rotaptcha from "../index";
 import * as fs from "fs";
 import * as path from "path";
 
+// Mock jose module
+jest.mock('jose', () => ({
+  CompactEncrypt: jest.fn().mockImplementation(function(this: any, payload: any) {
+    this.payload = payload;
+    this.setProtectedHeader = jest.fn().mockReturnThis();
+    this.encrypt = jest.fn().mockResolvedValue('mock-encrypted-token');
+    return this;
+  }),
+  compactDecrypt: jest.fn().mockImplementation(async (token: string, secretKey: any) => {
+    // If token is invalid, throw error
+    if (token === 'invalid-token-string') {
+      throw new Error('Invalid token');
+    }
+    // Mock decryption - extract payload from the mock token
+    const mockPayload = {
+      jti: 'mock-uuid',
+      answer: 50,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + 300 // 5 minutes from now
+    };
+    return {
+      plaintext: new TextEncoder().encode(JSON.stringify(mockPayload)),
+      protectedHeader: { alg: 'dir', enc: 'A256GCM' }
+    };
+  })
+}));
+
 describe("Rotaptcha", () => {
   const dbPath = path.join(process.cwd(), "rotaptcha.db.json");
+  const testSecretKey = "4b5b2febf41131f086242d87cc4e474bc9e620d9ace97d75ede05d814c9710bb";
 
   // Clean up database before and after tests
   beforeEach(() => {
@@ -29,6 +57,7 @@ describe("Rotaptcha", () => {
         step: 5,
         wobble: false,
         noise: true,
+        secretKey: testSecretKey,
       });
 
       // Result should be an object with image and token
@@ -49,6 +78,7 @@ describe("Rotaptcha", () => {
         minValue: 30,
         maxValue: 90,
         step: 5,
+        secretKey: testSecretKey,
       });
 
       // Result should be defined with image and token
@@ -66,20 +96,21 @@ describe("Rotaptcha", () => {
       const captcha = await rotaptcha.create({
         width: 400,
         height: 400,
-        minValue: 30,
-        maxValue: 90,
+        minValue: 50,
+        maxValue: 50,
         step: 5,
+        secretKey: testSecretKey,
       });
 
-      // Since we're using LokiJS, we need to retrieve the stored rotation
-      // The rotation is stored but we need to test with the actual token
+      // Verify with the correct answer (50 since min and max are both 50)
       const isVerified = await rotaptcha.verify({
-        uuid: captcha.token,
-        answer: "50", // This should match if rotation was 50
+        token: captcha.token,
+        answer: "50",
+        secretKey: testSecretKey,
       });
 
-      // The verify function should return a boolean
-      expect(typeof isVerified).toBe("boolean");
+      // The verify function should return true for correct answer
+      expect(isVerified).toBe(true);
     });
 
     it("should return false when an incorrect answer is provided", async () => {
@@ -90,22 +121,25 @@ describe("Rotaptcha", () => {
         minValue: 30,
         maxValue: 90,
         step: 5,
+        secretKey: testSecretKey,
       });
 
       // Verify with an incorrect answer
       const isVerified = await rotaptcha.verify({
-        uuid: captcha.token,
+        token: captcha.token,
         answer: "999", // This should never match since maxValue is 90
+        secretKey: testSecretKey,
       });
 
       expect(isVerified).toBe(false);
     });
 
-    it("should return false when UUID does not exist", async () => {
-      // Verify with a non-existent UUID
+    it("should return false when token is invalid", async () => {
+      // Verify with an invalid token
       const isVerified = await rotaptcha.verify({
-        uuid: "non-existent-uuid",
+        token: "invalid-token-string",
         answer: "50",
+        secretKey: testSecretKey,
       });
 
       expect(isVerified).toBe(false);

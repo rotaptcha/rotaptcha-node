@@ -9,6 +9,8 @@ const port = 3000;
 app.use(express.static(path.join(__dirname)));
 app.use(express.json());
 
+const demoKey = "4b5b2febf41131f086242d87cc4e474b";
+
 // Create captcha endpoint
 app.get('/api/create', async (req, res) => {
     try {
@@ -19,8 +21,9 @@ app.get('/api/create', async (req, res) => {
             maxValue: 90,
             step: 10,
             strokeWidth: 5,
-            wobble: false,
-            noise: true
+            wobble: true,
+            noise: true,
+            secretKey: demoKey,
         });
         res.json(result);
     } catch (error) {
@@ -31,8 +34,8 @@ app.get('/api/create', async (req, res) => {
 // Verify captcha endpoint
 app.post('/api/verify', async (req, res) => {
     try {
-        const { uuid, answer } = req.body;
-        const result = await rotaptcha.verify({ uuid, answer });
+        const { token, answer } = req.body;
+        const result = await rotaptcha.verify({ token, answer, secretKey: demoKey });
         res.json({ success: result });
     } catch (error) {
         res.status(500).json({ error: error.message });
