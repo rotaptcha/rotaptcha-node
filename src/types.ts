@@ -12,7 +12,6 @@ export interface CreateProps {
     minValue?: number;
     maxValue?: number;
     step?: number;
-    strokeWidth?: number;
     wobble?: boolean;
     noise?: boolean;
 

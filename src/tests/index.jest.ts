@@ -27,7 +27,6 @@ describe("Rotaptcha", () => {
         minValue: 30,
         maxValue: 90,
         step: 5,
-        strokeWidth: 5,
         wobble: false,
         noise: true,
       });

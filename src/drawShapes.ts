@@ -4,7 +4,7 @@ import { createCanvas } from 'canvas';
 // Shape type definitions
 type ShapeType = 'square' | 'triangle' | 'circle' | 'rectangle' | 'rhombus' | 'trapezoid';
 
-export async function drawShapes(canvasWidth: number, canvasHeight: number, strokeWidth: number, rotationDegrees: number, wobble: boolean = false, noise: boolean = false): Promise<string> {
+export async function drawShapes(canvasWidth: number, canvasHeight: number, strokeWidth: number, availableColors: string[], canvasBg: string, noiseDensity: number, rotationDegrees: number, wobble: boolean = false, noise: boolean = false): Promise<string> {
     const canvas = createCanvas(canvasWidth, canvasHeight);
     const ctx = canvas.getContext('2d');
     
@@ -22,12 +22,21 @@ export async function drawShapes(canvasWidth: number, canvasHeight: number, stro
     
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
     
+    // Set background color
+    ctx.fillStyle = canvasBg;
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    
     // Select 4 random shapes without repetition
     const availableShapes: ShapeType[] = ['square', 'triangle', 'circle', 'rectangle', 'rhombus', 'trapezoid'];
     const selectedShapes = selectRandomShapes(availableShapes, shapeSeed);
     
+    // Select 4 random colors for each shape (one per quadrant)
+    const selectedColors = [0, 1, 2, 3].map(index => {
+        const colorIndex = Math.floor(seededRandom(shapeSeed, index * 7 + 13) * availableColors.length);
+        return availableColors[colorIndex];
+    });
+    
     const drawAllShapes = () => {
-        ctx.strokeStyle = 'black';
         ctx.lineWidth = strokeWidth;
         
         // Quadrant center positions
@@ -38,8 +47,9 @@ export async function drawShapes(canvasWidth: number, canvasHeight: number, stro
             { x: quadWidth + quadWidth / 2, y: quadHeight + quadHeight / 2 } // Bottom-right
         ];
         
-        // Draw each selected shape in its quadrant
+        // Draw each selected shape in its quadrant with its assigned color
         positions.forEach((pos, index) => {
+            ctx.strokeStyle = selectedColors[index];
             drawShape(selectedShapes[index], pos.x, pos.y, quadWidth, quadHeight, ctx, wobble, shapeSeed, index);
         });
     };
@@ -53,8 +63,9 @@ export async function drawShapes(canvasWidth: number, canvasHeight: number, stro
     ctx.arc(canvasWidth / 2, canvasHeight / 2, canvasWidth / 3, 0, 2 * Math.PI);
     ctx.clip();
     
-    // Clear the central area
-    ctx.clearRect(canvasWidth/2 - canvasWidth/3, canvasHeight/2 - canvasWidth/3, 
+    // Clear the central area with background color
+    ctx.fillStyle = canvasBg;
+    ctx.fillRect(canvasWidth/2 - canvasWidth/3, canvasHeight/2 - canvasWidth/3, 
                  canvasWidth/3 * 2, canvasWidth/3 * 2);
     
     // Apply rotation transformation
@@ -68,71 +79,7 @@ export async function drawShapes(canvasWidth: number, canvasHeight: number, stro
     
     // Add noise over the entire canvas AFTER all shapes and rotation are completed
     if (noise) {
-        const noiseCount = 50; // More noise points for the entire canvas
-        const noiseSize = strokeWidth * 0.8; // Noise size relative to stroke width
-        
-        ctx.save();
-        // Use the same color as shapes with opacity
-        ctx.strokeStyle = 'rgba(0, 0, 0, 1)';
-        ctx.lineWidth = strokeWidth * 0.6;
-        
-        for (let i = 0; i < noiseCount; i++) {
-            // Use seeded random to ensure consistent noise across the entire canvas
-            const noiseX = seededRandom(shapeSeed, i * 10) * canvasWidth;
-            const noiseY = seededRandom(shapeSeed, i * 20) * canvasHeight;
-            
-            // Randomly choose between dots, short lines, and tiny crosses
-            const noiseType = Math.floor(seededRandom(shapeSeed, i * 30) * 3); // 0, 1, or 2
-            
-            if (noiseType === 0) {
-                // Draw a dot
-                ctx.beginPath();
-                ctx.arc(noiseX, noiseY, noiseSize, 0, 2 * Math.PI);
-                ctx.stroke();
-            } else if (noiseType === 1) {
-                // Draw a short line
-                const lineAngle = seededRandom(shapeSeed, i * 40) * Math.PI * 2;
-                const lineLength = noiseSize * 3;
-                
-                ctx.beginPath();
-                ctx.moveTo(
-                    noiseX + Math.cos(lineAngle) * lineLength,
-                    noiseY + Math.sin(lineAngle) * lineLength
-                );
-                ctx.lineTo(
-                    noiseX - Math.cos(lineAngle) * lineLength,
-                    noiseY - Math.sin(lineAngle) * lineLength
-                );
-                ctx.stroke();
-            } else {
-                // Draw a tiny cross
-                const crossSize = noiseSize * 1.5;
-                
-                ctx.beginPath();
-                ctx.moveTo(noiseX - crossSize, noiseY);
-                ctx.lineTo(noiseX + crossSize, noiseY);
-                ctx.stroke();
-                
-                ctx.beginPath();
-                ctx.moveTo(noiseX, noiseY - crossSize);
-                ctx.lineTo(noiseX, noiseY + crossSize);
-                ctx.stroke();
-            }
-        }
-        
-        // Add a few scattered speckles
-        ctx.fillStyle = 'rgba(0, 0, 0, 1)'; // Same color as shapes with transparency
-        for (let i = 0; i < noiseCount * 2; i++) {
-            const speckleX = seededRandom(shapeSeed, i * 50) * canvasWidth;
-            const speckleY = seededRandom(shapeSeed, i * 60) * canvasHeight;
-            const speckleSize = noiseSize * 0.4 * seededRandom(shapeSeed, i * 70);
-            
-            ctx.beginPath();
-            ctx.arc(speckleX, speckleY, speckleSize, 0, 2 * Math.PI);
-            ctx.fill();
-        }
-        
-        ctx.restore();
+        addNoise(ctx, canvasWidth, canvasHeight, strokeWidth, availableColors, noiseDensity, shapeSeed, seededRandom);
     }
     
     // Use createPNGStream to avoid file system issues in read-only environments
@@ -168,6 +115,66 @@ function selectRandomShapes(shapes: ShapeType[], seed: number): ShapeType[] {
         [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
     return shuffled.slice(0, 4);
+}
+
+// Add noise with lines and arcs
+function addNoise(
+    ctx: any,
+    canvasWidth: number,
+    canvasHeight: number,
+    strokeWidth: number,
+    availableColors: string[],
+    noiseDensity: number,
+    shapeSeed: number,
+    seededRandom: (seed: number, index: number) => number
+): void {
+    const minSize = canvasWidth / 8; // Minimum size: 1/4th of width
+    const maxSize = canvasWidth / 6; // Maximum size: half of width
+    
+    ctx.save();
+    ctx.lineWidth = strokeWidth;
+    ctx.lineCap = 'round';
+    
+    for (let i = 0; i < noiseDensity; i++) {
+        // Select random color for each noise element
+        const colorIndex = Math.floor(seededRandom(shapeSeed, i * 100 + 500) * availableColors.length);
+        ctx.strokeStyle = availableColors[colorIndex];
+        
+        // Random position
+        const x = seededRandom(shapeSeed, i * 10 + 1000) * canvasWidth;
+        const y = seededRandom(shapeSeed, i * 20 + 2000) * canvasHeight;
+        
+        // Random size between minSize and maxSize
+        const size = minSize + seededRandom(shapeSeed, i * 30 + 3000) * (maxSize - minSize);
+        
+        // Randomly choose between line or arc
+        const noiseType = Math.floor(seededRandom(shapeSeed, i * 40 + 4000) * 2); // 0 or 1
+        
+        ctx.beginPath();
+        
+        if (noiseType === 0) {
+            // Draw a line
+            const angle = seededRandom(shapeSeed, i * 50 + 5000) * Math.PI * 2;
+            const startX = x - Math.cos(angle) * size / 2;
+            const startY = y - Math.sin(angle) * size / 2;
+            const endX = x + Math.cos(angle) * size / 2;
+            const endY = y + Math.sin(angle) * size / 2;
+            
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(endX, endY);
+        } else {
+            // Draw an arc
+            const radius = size / 2;
+            const startAngle = seededRandom(shapeSeed, i * 60 + 6000) * Math.PI * 2;
+            const endAngle = startAngle + (seededRandom(shapeSeed, i * 70 + 7000) * Math.PI); // Arc spans up to 180 degrees
+            
+            ctx.arc(x, y, radius, startAngle, endAngle);
+        }
+        
+        ctx.stroke();
+    }
+    
+    ctx.restore();
 }
 
 // Wobble helper function
@@ -399,83 +406,83 @@ function drawTrapezoid(ctx: any, x: number, y: number, size: number, wobble: boo
 }
 
 // Helper function to "unrotate" the shapes
-export async function unrotateShapes(canvasWidth: number, canvasHeight: number, strokeWidth: number, rotationDegrees: number): Promise<string> {
-    // This just calls drawShapes with the negative rotation angle
-    return drawShapes(canvasWidth, canvasHeight, strokeWidth, -rotationDegrees);
-}
+// export async function unrotateShapes(canvasWidth: number, canvasHeight: number, strokeWidth: number, strokeColor: string, rotationDegrees: number): Promise<string> {
+//     // This just calls drawShapes with the negative rotation angle
+//     return drawShapes(canvasWidth, canvasHeight, strokeWidth, strokeColor, -rotationDegrees);
+// }
 
 // Note: This is a suggested implementation - you'll need to adapt it to your existing shapes.ts file
 
-export function drawShapesSVG(width: number, height: number, count: number, angle: number, wobble: boolean = false, noise: boolean = false): string {
-  // Initialize SVG
-  let svg = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">`;
+// export function drawShapesSVG(width: number, height: number, count: number, angle: number, wobble: boolean = false, noise: boolean = false): string {
+//   // Initialize SVG
+//   let svg = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">`;
   
-  const centerX = width / 2;
-  const centerY = height / 2;
-  const radius = Math.min(width, height) / 3;
+//   const centerX = width / 2;
+//   const centerY = height / 2;
+//   const radius = Math.min(width, height) / 3;
   
-  // Draw each shape
-  for (let i = 0; i < count; i++) {
-    const rotationAngle = i * (360 / count);
-    const shapeElement = createShape(centerX, centerY, radius, rotationAngle + angle, wobble, noise);
-    svg += shapeElement;
-  }
+//   // Draw each shape
+//   for (let i = 0; i < count; i++) {
+//     const rotationAngle = i * (360 / count);
+//     const shapeElement = createShape(centerX, centerY, radius, rotationAngle + angle, wobble, noise);
+//     svg += shapeElement;
+//   }
   
-  svg += '</svg>';
-  return svg;
-}
+//   svg += '</svg>';
+//   return svg;
+// }
 
-function createShape(centerX: number, centerY: number, radius: number, angle: number, wobble: boolean, noise: boolean): string {
-  // Apply rotation transformation
-  const radians = (angle * Math.PI) / 180;
-  const x = centerX + radius * Math.cos(radians);
-  const y = centerY + radius * Math.sin(radians);
+// function createShape(centerX: number, centerY: number, radius: number, angle: number, wobble: boolean, noise: boolean): string {
+//   // Apply rotation transformation
+//   const radians = (angle * Math.PI) / 180;
+//   const x = centerX + radius * Math.cos(radians);
+//   const y = centerY + radius * Math.sin(radians);
   
-  // Create shape (for example, a rectangle)
-  const shapeSize = radius * 0.3;
-  let shape = '';
+//   // Create shape (for example, a rectangle)
+//   const shapeSize = radius * 0.3;
+//   let shape = '';
   
-  // Apply wobble effect if enabled
-  if (wobble) {
-    // Create a wobbly rectangle by adding random variations to each corner
-    const wobbleAmount = shapeSize * 0.15;
+//   // Apply wobble effect if enabled
+//   if (wobble) {
+//     // Create a wobbly rectangle by adding random variations to each corner
+//     const wobbleAmount = shapeSize * 0.15;
     
-    // Calculate the four corners with wobble
-    const points = [
-      [x - shapeSize/2 + (Math.random() - 0.5) * wobbleAmount, y - shapeSize/2 + (Math.random() - 0.5) * wobbleAmount],
-      [x + shapeSize/2 + (Math.random() - 0.5) * wobbleAmount, y - shapeSize/2 + (Math.random() - 0.5) * wobbleAmount],
-      [x + shapeSize/2 + (Math.random() - 0.5) * wobbleAmount, y + shapeSize/2 + (Math.random() - 0.5) * wobbleAmount],
-      [x - shapeSize/2 + (Math.random() - 0.5) * wobbleAmount, y + shapeSize/2 + (Math.random() - 0.5) * wobbleAmount]
-    ];
+//     // Calculate the four corners with wobble
+//     const points = [
+//       [x - shapeSize/2 + (Math.random() - 0.5) * wobbleAmount, y - shapeSize/2 + (Math.random() - 0.5) * wobbleAmount],
+//       [x + shapeSize/2 + (Math.random() - 0.5) * wobbleAmount, y - shapeSize/2 + (Math.random() - 0.5) * wobbleAmount],
+//       [x + shapeSize/2 + (Math.random() - 0.5) * wobbleAmount, y + shapeSize/2 + (Math.random() - 0.5) * wobbleAmount],
+//       [x - shapeSize/2 + (Math.random() - 0.5) * wobbleAmount, y + shapeSize/2 + (Math.random() - 0.5) * wobbleAmount]
+//     ];
     
-    // Create a polygon with the wobbly points
-    shape = `<polygon points="${points.map(p => p.join(',')).join(' ')}" fill="blue" />`;
-  } else {
-    // Create a regular rectangle
-    shape = `<rect x="${x - shapeSize/2}" y="${y - shapeSize/2}" width="${shapeSize}" height="${shapeSize}" fill="blue" />`;
-  }
+//     // Create a polygon with the wobbly points
+//     shape = `<polygon points="${points.map(p => p.join(',')).join(' ')}" fill="blue" />`;
+//   } else {
+//     // Create a regular rectangle
+//     shape = `<rect x="${x - shapeSize/2}" y="${y - shapeSize/2}" width="${shapeSize}" height="${shapeSize}" fill="blue" />`;
+//   }
   
-  // Add noise if enabled
-  if (noise) {
-    for (let i = 0; i < 3; i++) {
-      // Create random lines near the shape
-      const lineStartX = x + (Math.random() - 0.5) * shapeSize * 2;
-      const lineStartY = y + (Math.random() - 0.5) * shapeSize * 2;
-      let lineEndX = lineStartX + (Math.random() - 0.5) * shapeSize;
-      let lineEndY = lineStartY + (Math.random() - 0.5) * shapeSize;
+//   // Add noise if enabled
+//   if (noise) {
+//     for (let i = 0; i < 3; i++) {
+//       // Create random lines near the shape
+//       const lineStartX = x + (Math.random() - 0.5) * shapeSize * 2;
+//       const lineStartY = y + (Math.random() - 0.5) * shapeSize * 2;
+//       let lineEndX = lineStartX + (Math.random() - 0.5) * shapeSize;
+//       let lineEndY = lineStartY + (Math.random() - 0.5) * shapeSize;
       
-      // If wobble is also enabled, make the noise lines wobbly too
-      if (wobble) {
-        // Add a control point for a quadratic curve to create wobbly lines
-        const controlX = (lineStartX + lineEndX) / 2 + (Math.random() - 0.5) * shapeSize * 0.5;
-        const controlY = (lineStartY + lineEndY) / 2 + (Math.random() - 0.5) * shapeSize * 0.5;
-        shape += `<path d="M${lineStartX},${lineStartY} Q${controlX},${controlY} ${lineEndX},${lineEndY}" stroke="red" stroke-width="1" fill="none" />`;
-      } else {
-        // Straight line for regular noise
-        shape += `<line x1="${lineStartX}" y1="${lineStartY}" x2="${lineEndX}" y2="${lineEndY}" stroke="red" stroke-width="1" />`;
-      }
-    }
-  }
+//       // If wobble is also enabled, make the noise lines wobbly too
+//       if (wobble) {
+//         // Add a control point for a quadratic curve to create wobbly lines
+//         const controlX = (lineStartX + lineEndX) / 2 + (Math.random() - 0.5) * shapeSize * 0.5;
+//         const controlY = (lineStartY + lineEndY) / 2 + (Math.random() - 0.5) * shapeSize * 0.5;
+//         shape += `<path d="M${lineStartX},${lineStartY} Q${controlX},${controlY} ${lineEndX},${lineEndY}" stroke="red" stroke-width="1" fill="none" />`;
+//       } else {
+//         // Straight line for regular noise
+//         shape += `<line x1="${lineStartX}" y1="${lineStartY}" x2="${lineEndX}" y2="${lineEndY}" stroke="red" stroke-width="1" />`;
+//       }
+//     }
+//   }
   
-  return shape;
-}
+//   return shape;
+// }
