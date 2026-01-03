@@ -50,7 +50,7 @@ export async function drawShapes(canvasWidth: number, canvasHeight: number, stro
         // Draw each selected shape in its quadrant with its assigned color
         positions.forEach((pos, index) => {
             ctx.strokeStyle = selectedColors[index];
-            drawShape(selectedShapes[index], pos.x, pos.y, quadWidth, quadHeight, ctx, wobble, shapeSeed, index);
+            drawShape(selectedShapes[index], pos.x, pos.y, quadWidth, quadHeight, ctx, shapeSeed, index, wobble);
         });
     };
     
@@ -177,7 +177,7 @@ function addNoise(
     ctx.restore();
 }
 
-// Wobble helper function
+// Wobble helper function (kept for backwards compatibility but no longer used)
 function getWobbleOffset(wobble: boolean, quadWidth: number, seed: number, index: number): number {
     if (!wobble) return 0;
     const wobbleAmount = quadWidth * 0.06;
@@ -192,56 +192,49 @@ function drawShape(
     quadWidth: number,
     quadHeight: number,
     ctx: any,
-    wobble: boolean,
     seed: number,
-    position: number
+    position: number,
+    wobble: boolean = false
 ): void {
     const sizeFactor = 0.85;
+    const shapeSeed = seed + position * 100;
     
     switch (shapeType) {
         case 'circle':
-            drawCircle(ctx, x, y, quadWidth * 0.4 * sizeFactor, wobble, quadWidth, seed, position);
+            drawCircle(ctx, x, y, quadWidth * 0.4 * sizeFactor, wobble, shapeSeed);
             break;
         case 'square':
-            drawSquare(ctx, x, y, quadWidth * 0.8 * sizeFactor, wobble, quadWidth, seed, position);
+            drawSquare(ctx, x, y, quadWidth * 0.8 * sizeFactor, wobble, shapeSeed);
             break;
         case 'triangle':
-            drawTriangle(ctx, x, y, quadWidth * 0.8 * sizeFactor, wobble, quadWidth, seed, position);
+            drawTriangle(ctx, x, y, quadWidth * 0.8 * sizeFactor, wobble, shapeSeed);
             break;
         case 'rectangle':
-            drawRectangle(ctx, x, y, quadWidth * 0.7 * sizeFactor, quadHeight * 0.5 * sizeFactor, wobble, quadWidth, seed, position);
+            drawRectangle(ctx, x, y, quadWidth * 0.7 * sizeFactor, quadHeight * 0.5 * sizeFactor, wobble, shapeSeed);
             break;
         case 'rhombus':
-            drawRhombus(ctx, x, y, quadWidth * 0.8 * sizeFactor, wobble, quadWidth, seed, position);
+            drawRhombus(ctx, x, y, quadWidth * 0.8 * sizeFactor, wobble, shapeSeed);
             break;
         case 'trapezoid':
-            drawTrapezoid(ctx, x, y, quadWidth * 0.8 * sizeFactor, wobble, quadWidth, seed, position);
+            drawTrapezoid(ctx, x, y, quadWidth * 0.8 * sizeFactor, wobble, shapeSeed);
             break;
     }
 }
 
 // Individual shape drawing functions
-function drawCircle(ctx: any, x: number, y: number, radius: number, wobble: boolean, quadWidth: number, seed: number, position: number): void {
+function drawCircle(ctx: any, x: number, y: number, radius: number, wobble: boolean = false, seed: number = 0): void {
     ctx.beginPath();
     if (wobble) {
-        const segments = 12;
-        let lastX = x + radius;
-        let lastY = y;
-        ctx.moveTo(lastX, lastY);
-        
-        for (let i = 1; i <= segments; i++) {
+        const segments = 24;
+        const wobbleAmount = radius * 0.03;
+        for (let i = 0; i <= segments; i++) {
             const angle = (i / segments) * Math.PI * 2;
-            const wobbleX = getWobbleOffset(wobble, quadWidth, seed, position * 100 + i);
-            const wobbleY = getWobbleOffset(wobble, quadWidth, seed, position * 100 + i + 50);
-            const nextX = x + Math.cos(angle) * (radius + wobbleX);
-            const nextY = y + Math.sin(angle) * (radius + wobbleY);
-            
-            const cp1x = lastX + (nextX - lastX) * 0.5 - (nextY - lastY) * 0.2;
-            const cp1y = lastY + (nextY - lastY) * 0.5 + (nextX - lastX) * 0.2;
-            
-            ctx.quadraticCurveTo(cp1x, cp1y, nextX, nextY);
-            lastX = nextX;
-            lastY = nextY;
+            const wobbleOffset = (Math.sin(seed + i * 0.5) * 0.5 + 0.5) * wobbleAmount;
+            const r = radius + wobbleOffset;
+            const px = x + Math.cos(angle) * r;
+            const py = y + Math.sin(angle) * r;
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
         }
     } else {
         ctx.arc(x, y, radius, 0, 2 * Math.PI);
@@ -249,159 +242,180 @@ function drawCircle(ctx: any, x: number, y: number, radius: number, wobble: bool
     ctx.stroke();
 }
 
-function drawSquare(ctx: any, x: number, y: number, size: number, wobble: boolean, quadWidth: number, seed: number, position: number): void {
+function drawSquare(ctx: any, x: number, y: number, size: number, wobble: boolean = false, seed: number = 0): void {
     ctx.beginPath();
     const halfSize = size / 2;
-    
     if (wobble) {
+        const wobbleAmount = size * 0.02;
         const points = [
-            [x - halfSize + getWobbleOffset(wobble, quadWidth, seed, position * 100), 
-             y - halfSize + getWobbleOffset(wobble, quadWidth, seed, position * 100 + 1)],
-            [x + halfSize + getWobbleOffset(wobble, quadWidth, seed, position * 100 + 2), 
-             y - halfSize + getWobbleOffset(wobble, quadWidth, seed, position * 100 + 3)],
-            [x + halfSize + getWobbleOffset(wobble, quadWidth, seed, position * 100 + 4), 
-             y + halfSize + getWobbleOffset(wobble, quadWidth, seed, position * 100 + 5)],
-            [x - halfSize + getWobbleOffset(wobble, quadWidth, seed, position * 100 + 6), 
-             y + halfSize + getWobbleOffset(wobble, quadWidth, seed, position * 100 + 7)]
+            [x - halfSize, y - halfSize],
+            [x + halfSize, y - halfSize],
+            [x + halfSize, y + halfSize],
+            [x - halfSize, y + halfSize]
         ];
         
         ctx.moveTo(points[0][0], points[0][1]);
         for (let i = 0; i < 4; i++) {
-            const next = (i + 1) % 4;
-            const cpX = (points[i][0] + points[next][0]) / 2 + getWobbleOffset(wobble, quadWidth, seed, position * 100 + i + 10);
-            const cpY = (points[i][1] + points[next][1]) / 2 + getWobbleOffset(wobble, quadWidth, seed, position * 100 + i + 15);
-            ctx.quadraticCurveTo(cpX, cpY, points[next][0], points[next][1]);
+            const current = points[i];
+            const next = points[(i + 1) % 4];
+            const segments = 8;
+            
+            for (let j = 1; j <= segments; j++) {
+                const t = j / segments;
+                const px = current[0] + (next[0] - current[0]) * t;
+                const py = current[1] + (next[1] - current[1]) * t;
+                const wobble = (Math.sin(seed + i * 10 + j * 0.5) * 0.5 + 0.5) * wobbleAmount;
+                ctx.lineTo(px + wobble, py + wobble);
+            }
         }
+        ctx.closePath();
     } else {
         ctx.rect(x - halfSize, y - halfSize, size, size);
     }
     ctx.stroke();
 }
 
-function drawTriangle(ctx: any, x: number, y: number, size: number, wobble: boolean, quadWidth: number, seed: number, position: number): void {
+function drawTriangle(ctx: any, x: number, y: number, size: number, wobble: boolean = false, seed: number = 0): void {
     ctx.beginPath();
-    
     if (wobble) {
+        const wobbleAmount = size * 0.02;
         const points = [
-            [x + getWobbleOffset(wobble, quadWidth, seed, position * 100), 
-             y - size / 2 + getWobbleOffset(wobble, quadWidth, seed, position * 100 + 1)],
-            [x - size / 2 + getWobbleOffset(wobble, quadWidth, seed, position * 100 + 2), 
-             y + size / 2 + getWobbleOffset(wobble, quadWidth, seed, position * 100 + 3)],
-            [x + size / 2 + getWobbleOffset(wobble, quadWidth, seed, position * 100 + 4), 
-             y + size / 2 + getWobbleOffset(wobble, quadWidth, seed, position * 100 + 5)]
+            [x, y - size / 2],
+            [x - size / 2, y + size / 2],
+            [x + size / 2, y + size / 2]
         ];
         
         ctx.moveTo(points[0][0], points[0][1]);
         for (let i = 0; i < 3; i++) {
-            const next = (i + 1) % 3;
-            const cpX = (points[i][0] + points[next][0]) / 2 + getWobbleOffset(wobble, quadWidth, seed, position * 100 + i + 10);
-            const cpY = (points[i][1] + points[next][1]) / 2 + getWobbleOffset(wobble, quadWidth, seed, position * 100 + i + 15);
-            ctx.quadraticCurveTo(cpX, cpY, points[next][0], points[next][1]);
+            const current = points[i];
+            const next = points[(i + 1) % 3];
+            const segments = 8;
+            
+            for (let j = 1; j <= segments; j++) {
+                const t = j / segments;
+                const px = current[0] + (next[0] - current[0]) * t;
+                const py = current[1] + (next[1] - current[1]) * t;
+                const wobble = (Math.sin(seed + i * 10 + j * 0.5) * 0.5 + 0.5) * wobbleAmount;
+                ctx.lineTo(px + wobble, py + wobble);
+            }
         }
+        ctx.closePath();
     } else {
         ctx.moveTo(x, y - size / 2);
         ctx.lineTo(x - size / 2, y + size / 2);
         ctx.lineTo(x + size / 2, y + size / 2);
+        ctx.closePath();
     }
-    ctx.closePath();
     ctx.stroke();
 }
 
-function drawRectangle(ctx: any, x: number, y: number, width: number, height: number, wobble: boolean, quadWidth: number, seed: number, position: number): void {
+function drawRectangle(ctx: any, x: number, y: number, width: number, height: number, wobble: boolean = false, seed: number = 0): void {
     ctx.beginPath();
     const halfWidth = width / 2;
     const halfHeight = height / 2;
-    
     if (wobble) {
+        const wobbleAmount = Math.min(width, height) * 0.02;
         const points = [
-            [x - halfWidth + getWobbleOffset(wobble, quadWidth, seed, position * 100), 
-             y - halfHeight + getWobbleOffset(wobble, quadWidth, seed, position * 100 + 1)],
-            [x + halfWidth + getWobbleOffset(wobble, quadWidth, seed, position * 100 + 2), 
-             y - halfHeight + getWobbleOffset(wobble, quadWidth, seed, position * 100 + 3)],
-            [x + halfWidth + getWobbleOffset(wobble, quadWidth, seed, position * 100 + 4), 
-             y + halfHeight + getWobbleOffset(wobble, quadWidth, seed, position * 100 + 5)],
-            [x - halfWidth + getWobbleOffset(wobble, quadWidth, seed, position * 100 + 6), 
-             y + halfHeight + getWobbleOffset(wobble, quadWidth, seed, position * 100 + 7)]
+            [x - halfWidth, y - halfHeight],
+            [x + halfWidth, y - halfHeight],
+            [x + halfWidth, y + halfHeight],
+            [x - halfWidth, y + halfHeight]
         ];
         
         ctx.moveTo(points[0][0], points[0][1]);
         for (let i = 0; i < 4; i++) {
-            const next = (i + 1) % 4;
-            const cpX = (points[i][0] + points[next][0]) / 2 + getWobbleOffset(wobble, quadWidth, seed, position * 100 + i + 10);
-            const cpY = (points[i][1] + points[next][1]) / 2 + getWobbleOffset(wobble, quadWidth, seed, position * 100 + i + 15);
-            ctx.quadraticCurveTo(cpX, cpY, points[next][0], points[next][1]);
+            const current = points[i];
+            const next = points[(i + 1) % 4];
+            const segments = 8;
+            
+            for (let j = 1; j <= segments; j++) {
+                const t = j / segments;
+                const px = current[0] + (next[0] - current[0]) * t;
+                const py = current[1] + (next[1] - current[1]) * t;
+                const wobble = (Math.sin(seed + i * 10 + j * 0.5) * 0.5 + 0.5) * wobbleAmount;
+                ctx.lineTo(px + wobble, py + wobble);
+            }
         }
+        ctx.closePath();
     } else {
         ctx.rect(x - halfWidth, y - halfHeight, width, height);
     }
     ctx.stroke();
 }
 
-function drawRhombus(ctx: any, x: number, y: number, size: number, wobble: boolean, quadWidth: number, seed: number, position: number): void {
+function drawRhombus(ctx: any, x: number, y: number, size: number, wobble: boolean = false, seed: number = 0): void {
     ctx.beginPath();
     const halfSize = size / 2;
-    
     if (wobble) {
+        const wobbleAmount = size * 0.02;
         const points = [
-            [x + getWobbleOffset(wobble, quadWidth, seed, position * 100), 
-             y - halfSize + getWobbleOffset(wobble, quadWidth, seed, position * 100 + 1)],
-            [x + halfSize + getWobbleOffset(wobble, quadWidth, seed, position * 100 + 2), 
-             y + getWobbleOffset(wobble, quadWidth, seed, position * 100 + 3)],
-            [x + getWobbleOffset(wobble, quadWidth, seed, position * 100 + 4), 
-             y + halfSize + getWobbleOffset(wobble, quadWidth, seed, position * 100 + 5)],
-            [x - halfSize + getWobbleOffset(wobble, quadWidth, seed, position * 100 + 6), 
-             y + getWobbleOffset(wobble, quadWidth, seed, position * 100 + 7)]
+            [x, y - halfSize],
+            [x + halfSize, y],
+            [x, y + halfSize],
+            [x - halfSize, y]
         ];
         
         ctx.moveTo(points[0][0], points[0][1]);
         for (let i = 0; i < 4; i++) {
-            const next = (i + 1) % 4;
-            const cpX = (points[i][0] + points[next][0]) / 2 + getWobbleOffset(wobble, quadWidth, seed, position * 100 + i + 10);
-            const cpY = (points[i][1] + points[next][1]) / 2 + getWobbleOffset(wobble, quadWidth, seed, position * 100 + i + 15);
-            ctx.quadraticCurveTo(cpX, cpY, points[next][0], points[next][1]);
+            const current = points[i];
+            const next = points[(i + 1) % 4];
+            const segments = 8;
+            
+            for (let j = 1; j <= segments; j++) {
+                const t = j / segments;
+                const px = current[0] + (next[0] - current[0]) * t;
+                const py = current[1] + (next[1] - current[1]) * t;
+                const wobble = (Math.sin(seed + i * 10 + j * 0.5) * 0.5 + 0.5) * wobbleAmount;
+                ctx.lineTo(px + wobble, py + wobble);
+            }
         }
+        ctx.closePath();
     } else {
-        ctx.moveTo(x, y - halfSize);           // Top
-        ctx.lineTo(x + halfSize, y);           // Right
-        ctx.lineTo(x, y + halfSize);           // Bottom
-        ctx.lineTo(x - halfSize, y);           // Left
+        ctx.moveTo(x, y - halfSize);
+        ctx.lineTo(x + halfSize, y);
+        ctx.lineTo(x, y + halfSize);
+        ctx.lineTo(x - halfSize, y);
+        ctx.closePath();
     }
-    ctx.closePath();
     ctx.stroke();
 }
 
-function drawTrapezoid(ctx: any, x: number, y: number, size: number, wobble: boolean, quadWidth: number, seed: number, position: number): void {
+function drawTrapezoid(ctx: any, x: number, y: number, size: number, wobble: boolean = false, seed: number = 0): void {
     ctx.beginPath();
     const halfSize = size / 2;
     const topWidth = size * 0.6;
     const halfTopWidth = topWidth / 2;
-    
     if (wobble) {
+        const wobbleAmount = size * 0.02;
         const points = [
-            [x - halfTopWidth + getWobbleOffset(wobble, quadWidth, seed, position * 100), 
-             y - halfSize + getWobbleOffset(wobble, quadWidth, seed, position * 100 + 1)],
-            [x + halfTopWidth + getWobbleOffset(wobble, quadWidth, seed, position * 100 + 2), 
-             y - halfSize + getWobbleOffset(wobble, quadWidth, seed, position * 100 + 3)],
-            [x + halfSize + getWobbleOffset(wobble, quadWidth, seed, position * 100 + 4), 
-             y + halfSize + getWobbleOffset(wobble, quadWidth, seed, position * 100 + 5)],
-            [x - halfSize + getWobbleOffset(wobble, quadWidth, seed, position * 100 + 6), 
-             y + halfSize + getWobbleOffset(wobble, quadWidth, seed, position * 100 + 7)]
+            [x - halfTopWidth, y - halfSize],
+            [x + halfTopWidth, y - halfSize],
+            [x + halfSize, y + halfSize],
+            [x - halfSize, y + halfSize]
         ];
         
         ctx.moveTo(points[0][0], points[0][1]);
         for (let i = 0; i < 4; i++) {
-            const next = (i + 1) % 4;
-            const cpX = (points[i][0] + points[next][0]) / 2 + getWobbleOffset(wobble, quadWidth, seed, position * 100 + i + 10);
-            const cpY = (points[i][1] + points[next][1]) / 2 + getWobbleOffset(wobble, quadWidth, seed, position * 100 + i + 15);
-            ctx.quadraticCurveTo(cpX, cpY, points[next][0], points[next][1]);
+            const current = points[i];
+            const next = points[(i + 1) % 4];
+            const segments = 8;
+            
+            for (let j = 1; j <= segments; j++) {
+                const t = j / segments;
+                const px = current[0] + (next[0] - current[0]) * t;
+                const py = current[1] + (next[1] - current[1]) * t;
+                const wobble = (Math.sin(seed + i * 10 + j * 0.5) * 0.5 + 0.5) * wobbleAmount;
+                ctx.lineTo(px + wobble, py + wobble);
+            }
         }
+        ctx.closePath();
     } else {
-        ctx.moveTo(x - halfTopWidth, y - halfSize);  // Top-left
-        ctx.lineTo(x + halfTopWidth, y - halfSize);  // Top-right
-        ctx.lineTo(x + halfSize, y + halfSize);      // Bottom-right
-        ctx.lineTo(x - halfSize, y + halfSize);      // Bottom-left
+        ctx.moveTo(x - halfTopWidth, y - halfSize);
+        ctx.lineTo(x + halfTopWidth, y - halfSize);
+        ctx.lineTo(x + halfSize, y + halfSize);
+        ctx.lineTo(x - halfSize, y + halfSize);
+        ctx.closePath();
     }
-    ctx.closePath();
     ctx.stroke();
 }
 

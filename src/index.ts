@@ -1,19 +1,24 @@
 import { drawShapes } from "./drawShapes";
 import { CreateProps, Rotaptcha, VerifyProps } from "./types";
 import { generateShortUuid, randomWithStep } from "./utils";
-import Loki from "lokijs";
+import { decryptCaptchaToken, encryptCaptchaToken } from "./security-utils";
 
-
-// LokiJS setup
-const db = new Loki("rotaptcha.db.json");
-const answersCollection = db.addCollection<Record<string, any>>("answers");
-
-// Config object for stroke styling
-const config = {
-    strokeWidth: 5,
-    availableColors: ['#A47864', '#6667AB', '#F5DF4D', '#FFBE98', '#88B04B', '#5F4B8B', '#E27A3F', '#DF5A49'],
-    canvasBg : "#e6e6e6",
-    noiseDensity: 4
+// Default config object
+const defaultConfig = {
+    strokeWidth: 6,
+    availableColors: [
+        'rgb(198, 231, 159)',
+        'rgb(230, 103, 171)',
+        'rgb(147, 128, 230)',
+        'rgb(255, 190, 152)',
+        'rgb(191, 230, 11)',
+        'rgb(88, 106, 175)',
+        'rgb(230, 122, 63)',
+        'rgb(223, 230, 73)'
+    ],
+    canvasBg: "rgb(230, 230, 230)",
+    noiseDensity: 5,
+    expiryTime : 5 // 5 minutes
 };
 
 const rotaptcha: Rotaptcha = {
@@ -24,23 +29,61 @@ const rotaptcha: Rotaptcha = {
         maxValue = 90,
         step = 10,
         wobble = false,
-        noise = true
+        noise = true,
+        config,
+        secretKey
     }: CreateProps): Promise<{image: string, token: string}> => {
+        
+        // Merge user config with defaults
+        const finalConfig = { ...defaultConfig, ...config };
+        
         const rotation = randomWithStep(minValue, maxValue, step);
         const uuid = generateShortUuid();
-        answersCollection.insert({ uuid, rotation });
-        return { image: await drawShapes(width, height, config.strokeWidth, config.availableColors, config.canvasBg, config.noiseDensity, rotation, wobble, noise), token: uuid };
+        
+        const payload  = {
+            jti : uuid,
+            answer : rotation,
+            iat : Math.floor(Date.now() / 1000),
+            exp : Math.floor(Date.now() / 1000) + (finalConfig.expiryTime * 60) // 5 minutes expiry
+        };
+
+        const token = await encryptCaptchaToken(
+            payload,
+            secretKey
+        );
+
+        return { 
+            image: await drawShapes(
+                width, 
+                height, 
+                finalConfig.strokeWidth, 
+                finalConfig.availableColors, 
+                finalConfig.canvasBg, 
+                finalConfig.noiseDensity, 
+                rotation, 
+                wobble, 
+                noise
+            ), 
+            token: token 
+        };
     },
 
     verify: async (args: VerifyProps): Promise<boolean> => {
-        if (args.answer && args.uuid) {
-            const found = answersCollection.findOne({ uuid: args.uuid });
-            if (found && found.rotation === parseInt(args.answer)) {
-                return true;
+        
+        const solution = await decryptCaptchaToken(args.token, args.secretKey);
+
+        if (solution && Object.keys(solution).length > 0) {
+            // First check if token has expired
+            if (solution.exp >= Math.floor(Date.now() / 1000)) {
+                // Then check if answer is correct
+                if (parseInt(args.answer) === solution.answer) {
+                    return true;
+                }
             }
         }
+
         return false;
-    },
+    }
 };
 
 export default rotaptcha;
