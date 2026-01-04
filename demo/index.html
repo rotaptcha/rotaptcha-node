@@ -196,6 +196,58 @@
             <input type="number" id="answerInput" placeholder="e.g., 45" min="0" max="360" step="10">
         </div>
 
+        <div class="input-group">
+            <label for="strokeWidth">Stroke Width (1-10):</label>
+            <input type="number" id="strokeWidth" value="6" min="1" max="10" step="1">
+        </div>
+
+        <div class="input-group">
+            <label for="noiseDensity">Noise Density (0-8):</label>
+            <input type="number" id="noiseDensity" value="5" min="0" max="8" step="1">
+        </div>
+
+        <div class="input-group">
+            <label for="wobbleIntensity">Wobble Intensity (1-5):</label>
+            <input type="number" id="wobbleIntensity" value="3" min="1" max="5" step="1">
+        </div>
+
+        <div class="input-group">
+            <label for="width">Canvas Width (200-800):</label>
+            <input type="number" id="width" value="400" min="200" max="800" step="50">
+        </div>
+
+        <div class="input-group">
+            <label for="height">Canvas Height (200-800):</label>
+            <input type="number" id="height" value="400" min="200" max="800" step="50">
+        </div>
+
+        <div class="input-group">
+            <label for="minValue">Min Rotation Value (0-180):</label>
+            <input type="number" id="minValue" value="20" min="0" max="180" step="10">
+        </div>
+
+        <div class="input-group">
+            <label for="maxValue">Max Rotation Value (0-360):</label>
+            <input type="number" id="maxValue" value="90" min="0" max="360" step="10">
+        </div>
+
+        <div class="input-group">
+            <label for="step">Rotation Step (1-30):</label>
+            <input type="number" id="step" value="10" min="1" max="30" step="1">
+        </div>
+
+        <div class="input-group">
+            <label for="noise">
+                <input type="checkbox" id="noise" checked style="width: auto; display: inline-block; margin-right: 8px;">
+                Enable Noise
+            </label>
+        </div>
+
+        <div class="input-group">
+            <label for="canvasBg">Canvas Background Color:</label>
+            <input type="color" id="canvasBg" value="#ffffff" style="height: 40px;">
+        </div>
+
         <div class="button-group">
             <button id="verifyBtn">Verify Answer</button>
             <button id="refreshBtn">🔄 New Captcha</button>
@@ -219,7 +271,31 @@
             answerInput.value = '';
 
             try {
-                const response = await fetch('/api/create');
+                const strokeWidth = parseInt(document.getElementById('strokeWidth').value);
+                const noiseDensity = parseInt(document.getElementById('noiseDensity').value);
+                const wobbleIntensity = parseInt(document.getElementById('wobbleIntensity').value);
+                const width = parseInt(document.getElementById('width').value);
+                const height = parseInt(document.getElementById('height').value);
+                const minValue = parseInt(document.getElementById('minValue').value);
+                const maxValue = parseInt(document.getElementById('maxValue').value);
+                const step = parseInt(document.getElementById('step').value);
+                const noise = document.getElementById('noise').checked;
+                const canvasBg = document.getElementById('canvasBg').value;
+
+                const params = new URLSearchParams({
+                    strokeWidth: strokeWidth,
+                    noiseDensity: noiseDensity,
+                    wobbleIntensity: wobbleIntensity,
+                    width: width,
+                    height: height,
+                    minValue: minValue,
+                    maxValue: maxValue,
+                    step: step,
+                    noise: noise,
+                    canvasBg: canvasBg
+                });
+
+                const response = await fetch(`/api/create?${params}`);
                 const data = await response.json();
                 
                 currentToken = data.token;
