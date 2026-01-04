@@ -4,7 +4,7 @@ import { createCanvas } from 'canvas';
 // Shape type definitions
 type ShapeType = 'square' | 'triangle' | 'circle' | 'rectangle' | 'rhombus' | 'trapezoid';
 
-export async function drawShapes(canvasWidth: number, canvasHeight: number, strokeWidth: number, availableColors: string[], canvasBg: string, noiseDensity: number, rotationDegrees: number, wobble: boolean = false, noise: boolean = false): Promise<string> {
+export async function drawShapes(canvasWidth: number, canvasHeight: number, strokeWidth: number, availableColors: string[], canvasBg: string, noiseDensity: number, rotationDegrees: number, wobbleIntensity: number = 0, noise: boolean = false): Promise<string> {
     const canvas = createCanvas(canvasWidth, canvasHeight);
     const ctx = canvas.getContext('2d');
     
@@ -50,7 +50,7 @@ export async function drawShapes(canvasWidth: number, canvasHeight: number, stro
         // Draw each selected shape in its quadrant with its assigned color
         positions.forEach((pos, index) => {
             ctx.strokeStyle = selectedColors[index];
-            drawShape(selectedShapes[index], pos.x, pos.y, quadWidth, quadHeight, ctx, shapeSeed, index, wobble);
+            drawShape(selectedShapes[index], pos.x, pos.y, quadWidth, quadHeight, ctx, shapeSeed, index, wobbleIntensity);
         });
     };
     
@@ -178,8 +178,8 @@ function addNoise(
 }
 
 // Wobble helper function (kept for backwards compatibility but no longer used)
-function getWobbleOffset(wobble: boolean, quadWidth: number, seed: number, index: number): number {
-    if (!wobble) return 0;
+function getWobbleOffset(wobbleIntensity: number, quadWidth: number, seed: number, index: number): number {
+    if (!wobbleIntensity) return 0;
     const wobbleAmount = quadWidth * 0.06;
     return (((seed + index * 13) * 9301 + 49297) % 233280 / 233280 - 0.5) * wobbleAmount;
 }
@@ -194,39 +194,39 @@ function drawShape(
     ctx: any,
     seed: number,
     position: number,
-    wobble: boolean = false
+    wobbleIntensity: number = 0
 ): void {
     const sizeFactor = 0.85;
     const shapeSeed = seed + position * 100;
     
     switch (shapeType) {
         case 'circle':
-            drawCircle(ctx, x, y, quadWidth * 0.4 * sizeFactor, wobble, shapeSeed);
+            drawCircle(ctx, x, y, quadWidth * 0.4 * sizeFactor, wobbleIntensity, shapeSeed);
             break;
         case 'square':
-            drawSquare(ctx, x, y, quadWidth * 0.8 * sizeFactor, wobble, shapeSeed);
+            drawSquare(ctx, x, y, quadWidth * 0.8 * sizeFactor, wobbleIntensity, shapeSeed);
             break;
         case 'triangle':
-            drawTriangle(ctx, x, y, quadWidth * 0.8 * sizeFactor, wobble, shapeSeed);
+            drawTriangle(ctx, x, y, quadWidth * 0.8 * sizeFactor, wobbleIntensity, shapeSeed);
             break;
         case 'rectangle':
-            drawRectangle(ctx, x, y, quadWidth * 0.7 * sizeFactor, quadHeight * 0.5 * sizeFactor, wobble, shapeSeed);
+            drawRectangle(ctx, x, y, quadWidth * 0.7 * sizeFactor, quadHeight * 0.5 * sizeFactor, wobbleIntensity, shapeSeed);
             break;
         case 'rhombus':
-            drawRhombus(ctx, x, y, quadWidth * 0.8 * sizeFactor, wobble, shapeSeed);
+            drawRhombus(ctx, x, y, quadWidth * 0.8 * sizeFactor, wobbleIntensity, shapeSeed);
             break;
         case 'trapezoid':
-            drawTrapezoid(ctx, x, y, quadWidth * 0.8 * sizeFactor, wobble, shapeSeed);
+            drawTrapezoid(ctx, x, y, quadWidth * 0.8 * sizeFactor, wobbleIntensity, shapeSeed);
             break;
     }
 }
 
 // Individual shape drawing functions
-function drawCircle(ctx: any, x: number, y: number, radius: number, wobble: boolean = false, seed: number = 0): void {
+function drawCircle(ctx: any, x: number, y: number, radius: number, wobbleIntensity: number = 0, seed: number = 0): void {
     ctx.beginPath();
-    if (wobble) {
+    if (wobbleIntensity > 0) {
         const segments = 24;
-        const wobbleAmount = radius * 0.03;
+        const wobbleAmount = radius * 0.03 * wobbleIntensity;
         for (let i = 0; i <= segments; i++) {
             const angle = (i / segments) * Math.PI * 2;
             const wobbleOffset = (Math.sin(seed + i * 0.5) * 0.5 + 0.5) * wobbleAmount;
@@ -242,11 +242,11 @@ function drawCircle(ctx: any, x: number, y: number, radius: number, wobble: bool
     ctx.stroke();
 }
 
-function drawSquare(ctx: any, x: number, y: number, size: number, wobble: boolean = false, seed: number = 0): void {
+function drawSquare(ctx: any, x: number, y: number, size: number, wobbleIntensity: number = 0, seed: number = 0): void {
     ctx.beginPath();
     const halfSize = size / 2;
-    if (wobble) {
-        const wobbleAmount = size * 0.02;
+    if (wobbleIntensity > 0) {
+        const wobbleAmount = size * 0.02 * wobbleIntensity;
         const points = [
             [x - halfSize, y - halfSize],
             [x + halfSize, y - halfSize],
@@ -275,10 +275,10 @@ function drawSquare(ctx: any, x: number, y: number, size: number, wobble: boolea
     ctx.stroke();
 }
 
-function drawTriangle(ctx: any, x: number, y: number, size: number, wobble: boolean = false, seed: number = 0): void {
+function drawTriangle(ctx: any, x: number, y: number, size: number, wobbleIntensity: number = 0, seed: number = 0): void {
     ctx.beginPath();
-    if (wobble) {
-        const wobbleAmount = size * 0.02;
+    if (wobbleIntensity > 0) {
+        const wobbleAmount = size * 0.02 * wobbleIntensity;
         const points = [
             [x, y - size / 2],
             [x - size / 2, y + size / 2],
@@ -309,12 +309,12 @@ function drawTriangle(ctx: any, x: number, y: number, size: number, wobble: bool
     ctx.stroke();
 }
 
-function drawRectangle(ctx: any, x: number, y: number, width: number, height: number, wobble: boolean = false, seed: number = 0): void {
+function drawRectangle(ctx: any, x: number, y: number, width: number, height: number, wobbleIntensity: number = 0, seed: number = 0): void {
     ctx.beginPath();
     const halfWidth = width / 2;
     const halfHeight = height / 2;
-    if (wobble) {
-        const wobbleAmount = Math.min(width, height) * 0.02;
+    if (wobbleIntensity > 0) {
+        const wobbleAmount = Math.min(width, height) * 0.02 * wobbleIntensity;
         const points = [
             [x - halfWidth, y - halfHeight],
             [x + halfWidth, y - halfHeight],
@@ -343,11 +343,11 @@ function drawRectangle(ctx: any, x: number, y: number, width: number, height: nu
     ctx.stroke();
 }
 
-function drawRhombus(ctx: any, x: number, y: number, size: number, wobble: boolean = false, seed: number = 0): void {
+function drawRhombus(ctx: any, x: number, y: number, size: number, wobbleIntensity: number = 0, seed: number = 0): void {
     ctx.beginPath();
     const halfSize = size / 2;
-    if (wobble) {
-        const wobbleAmount = size * 0.02;
+    if (wobbleIntensity > 0) {
+        const wobbleAmount = size * 0.02 * wobbleIntensity;
         const points = [
             [x, y - halfSize],
             [x + halfSize, y],
@@ -380,13 +380,13 @@ function drawRhombus(ctx: any, x: number, y: number, size: number, wobble: boole
     ctx.stroke();
 }
 
-function drawTrapezoid(ctx: any, x: number, y: number, size: number, wobble: boolean = false, seed: number = 0): void {
+function drawTrapezoid(ctx: any, x: number, y: number, size: number, wobbleIntensity: number = 0, seed: number = 0): void {
     ctx.beginPath();
     const halfSize = size / 2;
     const topWidth = size * 0.6;
     const halfTopWidth = topWidth / 2;
-    if (wobble) {
-        const wobbleAmount = size * 0.02;
+    if (wobbleIntensity > 0) {
+        const wobbleAmount = size * 0.02 * wobbleIntensity;
         const points = [
             [x - halfTopWidth, y - halfSize],
             [x + halfTopWidth, y - halfSize],

@@ -1,18 +1,9 @@
 
 export interface Rotaptcha {
-    create(args: CreateProps): Promise<{image: string, token: string}>;
-    verify(props: VerifyProps): Promise<boolean>;
+    create(args: CreateProps, secretKey: string): Promise<{ image: string, token: string }>;
+    verify(props: VerifyProps, secretKey: string): Promise<boolean>;
 }
 
-export interface CaptchaConfig {
-    strokeWidth?: number;
-    availableColors?: string[];
-    canvasBg?: string;
-    noiseDensity?: number;
-    secretKey: string;
-    expiryTime?: number;
-
-}
 
 export interface CreateProps {
     width?: number;
@@ -20,15 +11,17 @@ export interface CreateProps {
     minValue?: number;
     maxValue?: number;
     step?: number;
-    wobble?: boolean;
+    wobbleIntensity?: number;
     noise?: boolean;
-    config?: CaptchaConfig;
-    secretKey: string;
+    strokeWidth?: number;
+    availableColors?: string[];
+    canvasBg?: string;
+    noiseDensity?: number;
+    expiryTime?: number;
 }
 
 export interface VerifyProps {
     answer: string;
     token: string;
-    secretKey:string;
 }
 

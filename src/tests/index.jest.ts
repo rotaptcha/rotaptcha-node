@@ -4,7 +4,7 @@ import * as path from "path";
 
 // Mock jose module
 jest.mock('jose', () => ({
-  CompactEncrypt: jest.fn().mockImplementation(function(this: any, payload: any) {
+  CompactEncrypt: jest.fn().mockImplementation(function (this: any, payload: any) {
     this.payload = payload;
     this.setProtectedHeader = jest.fn().mockReturnThis();
     this.encrypt = jest.fn().mockResolvedValue('mock-encrypted-token');
@@ -55,10 +55,9 @@ describe("Rotaptcha", () => {
         minValue: 30,
         maxValue: 90,
         step: 5,
-        wobble: false,
+        wobbleIntensity: 2,
         noise: true,
-        secretKey: testSecretKey,
-      });
+      }, testSecretKey);
 
       // Result should be an object with image and token
       expect(result).toBeDefined();
@@ -78,8 +77,8 @@ describe("Rotaptcha", () => {
         minValue: 30,
         maxValue: 90,
         step: 5,
-        secretKey: testSecretKey,
-      });
+      }, testSecretKey);
+
 
       // Result should be defined with image and token
       expect(result).toBeDefined();
@@ -99,15 +98,13 @@ describe("Rotaptcha", () => {
         minValue: 50,
         maxValue: 50,
         step: 5,
-        secretKey: testSecretKey,
-      });
+      }, testSecretKey);
 
       // Verify with the correct answer (50 since min and max are both 50)
       const isVerified = await rotaptcha.verify({
         token: captcha.token,
-        answer: "50",
-        secretKey: testSecretKey,
-      });
+        answer: "50"
+      }, testSecretKey);
 
       // The verify function should return true for correct answer
       expect(isVerified).toBe(true);
@@ -121,15 +118,14 @@ describe("Rotaptcha", () => {
         minValue: 30,
         maxValue: 90,
         step: 5,
-        secretKey: testSecretKey,
-      });
+      }, testSecretKey);
 
       // Verify with an incorrect answer
       const isVerified = await rotaptcha.verify({
         token: captcha.token,
         answer: "999", // This should never match since maxValue is 90
-        secretKey: testSecretKey,
-      });
+
+      }, testSecretKey);
 
       expect(isVerified).toBe(false);
     });
@@ -138,9 +134,8 @@ describe("Rotaptcha", () => {
       // Verify with an invalid token
       const isVerified = await rotaptcha.verify({
         token: "invalid-token-string",
-        answer: "50",
-        secretKey: testSecretKey,
-      });
+        answer: "50"
+      }, testSecretKey);
 
       expect(isVerified).toBe(false);
     });

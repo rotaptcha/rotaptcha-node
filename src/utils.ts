@@ -76,3 +76,23 @@ export function generateShortUuid(): string {
 
   return result.join('');
 }
+
+
+// Default config object
+export const defaultConfig = {
+    strokeWidth: 6,
+    availableColors: [
+        'rgb(198, 231, 159)',
+        'rgb(230, 103, 171)',
+        'rgb(147, 128, 230)',
+        'rgb(255, 190, 152)',
+        'rgb(191, 230, 11)',
+        'rgb(88, 106, 175)',
+        'rgb(230, 122, 63)',
+        'rgb(223, 230, 73)'
+    ],
+    canvasBg: "rgb(230, 230, 230)",
+    noiseDensity: 5,
+    wobbleIntensity: 3,
+    expiryTime: 5 // 5 minutes
+};
