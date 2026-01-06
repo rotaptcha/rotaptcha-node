@@ -23,8 +23,11 @@ export async function drawShapes(canvasWidth: number, canvasHeight: number, stro
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
     
     // Set background color
-    ctx.fillStyle = canvasBg;
-    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    // ctx.fillStyle = canvasBg;
+    // ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+    // Add gradient background
+    addBackground(ctx, canvasWidth, canvasHeight, shapeSeed);
     
     // Select 4 random shapes without repetition
     const availableShapes: ShapeType[] = ['square', 'triangle', 'circle', 'rectangle', 'rhombus', 'trapezoid'];
@@ -68,14 +71,18 @@ export async function drawShapes(canvasWidth: number, canvasHeight: number, stro
     ctx.fillRect(canvasWidth/2 - canvasWidth/3, canvasHeight/2 - canvasWidth/3, 
                  canvasWidth/3 * 2, canvasWidth/3 * 2);
     
+    // Add gradient background to the central circle
+    addBackground(ctx, canvasWidth, canvasHeight, shapeSeed + 1000);
+    
     // Apply rotation transformation
     ctx.translate(canvasWidth / 2, canvasHeight / 2);
     ctx.rotate((rotationDegrees * Math.PI) / 180);
     ctx.translate(-canvasWidth / 2, -canvasHeight / 2);
-    
+
     // Draw the shapes again (with the same seed so they match)
     drawAllShapes();
     ctx.restore();
+
     
     // Add noise over the entire canvas AFTER all shapes and rotation are completed
     if (noise) {
@@ -128,8 +135,8 @@ function addNoise(
     shapeSeed: number,
     seededRandom: (seed: number, index: number) => number
 ): void {
-    const minSize = canvasWidth / 8; // Minimum size: 1/4th of width
-    const maxSize = canvasWidth / 6; // Maximum size: half of width
+    const minSize = canvasWidth / 4; // Minimum size: 1/4th of width
+    const maxSize = canvasWidth / 2; // Maximum size: half of width
     
     ctx.save();
     ctx.lineWidth = strokeWidth;
@@ -177,12 +184,74 @@ function addNoise(
     ctx.restore();
 }
 
-// Wobble helper function (kept for backwards compatibility but no longer used)
-function getWobbleOffset(wobbleIntensity: number, quadWidth: number, seed: number, index: number): number {
-    if (!wobbleIntensity) return 0;
-    const wobbleAmount = quadWidth * 0.06;
-    return (((seed + index * 13) * 9301 + 49297) % 233280 / 233280 - 0.5) * wobbleAmount;
+// Add gradient background with 4 sides converging to center
+function addBackground(
+    ctx: any,
+    canvasWidth: number,
+    canvasHeight: number,
+    seed: number
+): void {
+    // Seeded random function for consistent colors
+    const seededRandom = (s: number, offset: number) => {
+        const combinedSeed = s + offset;
+        return ((combinedSeed * 9301 + 49297) * 233) % 1000 / 1000;
+    };
+
+    // Generate 4 light random colors (one for each corner)
+    const generateLightColor = (offset: number): string => {
+        // Generate HSL color with high lightness (60-80%) and moderate saturation
+        const hue = Math.floor(seededRandom(seed, offset) * 360);
+        const saturation = 40 + Math.floor(seededRandom(seed, offset + 1000) * 40); // 40-80%
+        const lightness = 60 + Math.floor(seededRandom(seed, offset + 2000) * 20); // 60-80%
+        return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+    };
+
+    const colors = [
+        generateLightColor(0),    // Top-left
+        generateLightColor(100),  // Top-right
+        generateLightColor(200),  // Bottom-right
+        generateLightColor(300)   // Bottom-left
+    ];
+
+    const centerX = canvasWidth / 2;
+    const centerY = canvasHeight / 2;
+
+    // Draw 4 triangular gradients from each corner to center
+    const corners = [
+        { x: 0, y: 0, color: colors[0] },                           // Top-left
+        { x: canvasWidth, y: 0, color: colors[1] },                 // Top-right
+        { x: canvasWidth, y: canvasHeight, color: colors[2] },      // Bottom-right
+        { x: 0, y: canvasHeight, color: colors[3] }                 // Bottom-left
+    ];
+
+    corners.forEach((corner, index) => {
+        const nextCorner = corners[(index + 1) % 4];
+        
+        // Create radial gradient from center to corner
+        const distance = Math.sqrt(
+            Math.pow(corner.x - centerX, 2) + Math.pow(corner.y - centerY, 2)
+        );
+        
+        const gradient = ctx.createRadialGradient(
+            centerX, centerY, 0,
+            centerX, centerY, distance
+        );
+        
+        gradient.addColorStop(0, 'rgba(255, 255, 255, 0.3)'); // Light center
+        gradient.addColorStop(1, corner.color);
+        
+        // Draw a triangular section
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.lineTo(corner.x, corner.y);
+        ctx.lineTo(nextCorner.x, nextCorner.y);
+        ctx.closePath();
+        
+        ctx.fillStyle = gradient;
+        ctx.fill();
+    });
 }
+
 
 // Main shape drawing function
 function drawShape(

@@ -22,9 +22,6 @@ const rotaptcha: Rotaptcha = {
 
     }: CreateProps, secretKey: string): Promise<{ image: string, token: string }> => {
 
-    // Merge user config with defaults
-    // const finalConfig = { ...defaultConfig, ...config };
-
     const rotation = randomWithStep(minValue, maxValue, step);
     const uuid = generateShortUuid();
 
