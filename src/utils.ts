@@ -82,14 +82,14 @@ export function generateShortUuid(): string {
 export const defaultConfig = {
     strokeWidth: 6,
     availableColors: [
-        'rgb(208, 231, 252)',
-        'rgb(230, 203, 191)',
-        'rgb(247, 228, 230)',
-        'rgb(255, 190, 172)',
-        'rgb(191, 230, 211)',
-        'rgb(253, 206, 175)',
-        'rgb(230, 122, 143)',
-        'rgb(253, 230, 133)'
+        'rgb(208, 23, 252, 0.2)',
+        'rgba(230, 203, 191, 0.5)',
+        'rgba(47, 22, 230, 0.2)',
+        'rgba(255, 90, 172, 0.2)',
+        'rgba(191, 230, 211, 0.4)',
+        'rgba(253, 206, 175, 0.6)',
+        'rgba(30, 122, 143, 0.3)',
+        'rgba(253, 230, 133, 0.5)'
     ],
     canvasBg: "rgb(230, 230, 230)",
     noiseDensity: 5,
