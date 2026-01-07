@@ -1,5 +1,7 @@
 # rotaptcha-node
 
+![rotaptcha representation](image.png)
+
 A modern, gamified CAPTCHA solution for Node.js — no distorted text, no annoyance, just fun interactive challenges that users actually enjoy.
 
 ## Features
